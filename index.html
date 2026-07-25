@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>토글 카드 빌더</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --accent:#3b82f6;
+    --ink:#0f172a;
+    --sub:#64748b;
+    --line:#e5e9f0;
+    --panel:#ffffff;
+    --bg:#eef1f6;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    background:rgba(255,255,255,.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+    padding:14px 22px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:baseline;gap:10px;}
+  .brand b{font-size:18px;letter-spacing:-.02em;}
+  .brand span{font-size:12px;color:var(--sub);}
+  .topbar .spacer{flex:1;}
+  .swatches{display:flex;gap:7px;align-items:center;}
+  .sw{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;transition:transform .12s;}
+  .sw:hover{transform:scale(1.15);}
+  .color-field{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:5px 9px;}
+  .color-field label{font-size:12px;color:var(--sub);font-weight:600;}
+  .color-field input[type=color]{width:26px;height:26px;border:none;background:none;padding:0;cursor:pointer;}
+  .color-field input[type=text]{width:78px;border:none;outline:none;font-family:ui-monospace,monospace;font-size:13px;text-transform:uppercase;color:var(--ink);}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;min-height:calc(100vh - 59px);}
+  .col{padding:22px;overflow:auto;}
+  .col.editor{border-right:1px solid var(--line);}
+  .col.preview{background:#f6f8fc;}
+  .col-head{display:flex;align-items:center;justify-content:space-between;margin:2px 0 16px;}
+  .col-head h2{font-size:13px;font-weight:800;letter-spacing:.06em;color:var(--sub);text-transform:uppercase;margin:0;}
+  .col-head .hint{font-size:12px;color:var(--sub);}
+
+  /* editor cards */
+  .cat{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    margin-bottom:16px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04);
+  }
+  .cat-head{
+    display:flex;align-items:center;gap:8px;
+    padding:12px 14px;background:linear-gradient(0deg,#fafbfe,#fff);
+    border-bottom:1px solid var(--line);
+  }
+  .cat-head .idx{
+    width:24px;height:24px;flex:none;border-radius:7px;background:var(--accent);
+    color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center;
+  }
+  .cat-head input.title{
+    flex:1;border:none;outline:none;font-size:15px;font-weight:700;color:var(--ink);background:none;min-width:0;
+  }
+  .cat-body{padding:14px;}
+  .field{margin-bottom:14px;}
+  .field:last-child{margin-bottom:0;}
+  .field > label{display:block;font-size:11.5px;font-weight:700;color:var(--sub);margin-bottom:6px;letter-spacing:.02em;}
+  textarea,.txt{
+    width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;
+    font-family:inherit;font-size:13.5px;color:var(--ink);outline:none;resize:vertical;line-height:1.55;
+    background:#fff;transition:border-color .12s,box-shadow .12s;
+  }
+  textarea:focus,.txt:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent);}
+  textarea{min-height:60px;}
+
+  .block{border:1px dashed #d5dbe6;border-radius:11px;padding:11px;margin-bottom:10px;background:#fbfcfe;}
+  .block:last-child{margin-bottom:0;}
+  .block-head{display:flex;align-items:center;gap:7px;margin-bottom:9px;}
+  .tag{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;letter-spacing:.03em;}
+  .tag.img{background:#e0f2fe;color:#0369a1;}
+  .tag.txt{background:#dcfce7;color:#15803d;}
+  .block-head .fill{flex:1;}
+  .preview-img{width:100%;height:130px;border-radius:8px;object-fit:cover;margin-top:8px;border:1px solid var(--line);}
+
+  /* small icon buttons */
+  .iconbtn{
+    width:26px;height:26px;flex:none;border:1px solid var(--line);background:#fff;border-radius:7px;
+    cursor:pointer;color:var(--sub);font-size:14px;line-height:1;display:grid;place-items:center;padding:0;
+    transition:all .12s;
+  }
+  .iconbtn:hover{border-color:var(--accent);color:var(--accent);}
+  .iconbtn.danger:hover{border-color:#ef4444;color:#ef4444;}
+  .iconbtn:disabled{opacity:.35;cursor:not-allowed;}
+
+  .addrow{display:flex;gap:8px;margin-top:6px;}
+  .btn{
+    border:none;border-radius:9px;padding:9px 13px;font-family:inherit;font-size:13px;font-weight:700;
+    cursor:pointer;transition:all .12s;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn.soft{background:#eef2f8;color:#475569;flex:1;justify-content:center;}
+  .btn.soft:hover{background:#e2e8f2;}
+  .btn.primary{background:var(--accent);color:#fff;}
+  .btn.primary:hover{filter:brightness(1.06);}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink);}
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .btn.block{width:100%;justify-content:center;padding:12px;font-size:14px;}
+
+
+  /* preview & code */
+  .preview-wrap{background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 1px 2px rgba(15,23,42,.05);}
+  .code-head{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px;}
+  .code-head h2{font-size:13px;font-weight:800;letter-spacing:.06em;color:var(--sub);text-transform:uppercase;margin:0;}
+  #code{
+    width:100%;height:220px;border:1px solid var(--line);border-radius:12px;padding:13px;
+    font-family:ui-monospace,'SFMono-Regular',Menlo,monospace;font-size:11.5px;line-height:1.5;
+    background:#0f172a;color:#cbd5e1;resize:vertical;outline:none;
+  }
+  .copied{color:#16a34a !important;border-color:#16a34a !important;}
+
+  @media (max-width:920px){
+    .layout{grid-template-columns:1fr;}
+    .col.editor{border-right:none;border-bottom:1px solid var(--line);}
+    .col{max-height:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><b>토글 카드 빌더</b><span>구성하고 · 코드 복사해서 · 붙여넣기</span></div>
+  <div class="spacer"></div>
+  <div class="swatches" id="swatches"></div>
+  <div class="color-field">
+    <label>대표색</label>
+    <input type="color" id="colorPick" value="#3b82f6">
+    <input type="text" id="colorHex" value="#3B82F6" maxlength="7">
+  </div>
+</div>
+
+<div class="layout">
+  <!-- EDITOR -->
+  <div class="col editor">
+    <div class="col-head">
+      <h2>구성 편집</h2>
+      <span class="hint">토글·사진·설명을 자유롭게 추가/삭제하세요</span>
+    </div>
+    <div id="editor"></div>
+    <button class="btn primary block" data-act="add-cat" style="margin-top:6px;">＋ 토글(대분류) 추가</button>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="col preview">
+    <div class="col-head">
+      <h2>미리보기</h2>
+      <span class="hint">실제 붙여넣었을 때 그대로 보여요</span>
+    </div>
+    <div class="preview-wrap"><div id="preview"></div></div>
+
+    <div class="code-head">
+      <h2>완성 코드 <span id="sizeTag" style="font-weight:700;font-size:11.5px;letter-spacing:0;margin-left:6px;">0 KB</span></h2>
+      <button class="btn ghost" id="copyBtn">📋 코드 전체 복사</button>
+    </div>
+    <textarea id="code" readonly spellcheck="false"></textarea>
+  </div>
+</div>
+
+<script>
+// ---------- 상태 ----------
+const PRESETS = ["#3B82F6","#10B981","#8B5CF6","#EC4899","#F59E0B","#EF4444","#0EA5E9","#334155"];
+let state = {
+  primary: "#3B82F6",
+  cats: [
+    {
+      open:true,
+      title:"대분류 1 제목",
+      desc:"이 카테고리에 대한 전체적인 설명 및 개요를 여기에 적어요.",
+      blocks:[
+        {type:"image", title:"자료 제목 1-A", url:""},
+        {type:"text",  title:"설명 제목 1-B", content:"여기에 원하는 글을 자유롭게 입력하세요.\n줄바꿈도 그대로 반영됩니다."}
+      ]
+    },
+    {
+      open:false,
+      title:"대분류 2 제목",
+      desc:"두 번째 카테고리 설명입니다.",
+      blocks:[
+        {type:"image", title:"자료 제목 2-A", url:""}
+      ]
+    }
+  ]
+};
+
+// ---------- 유틸 ----------
+const esc = s => (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const nl2br = s => esc(s).replace(/\n/g,"<br>");
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255];}
+function tint(hex,a){const[r,g,b]=hexToRgb(hex);return `rgba(${r},${g},${b},${a})`;}
+
+// ---------- 완성 코드 생성 (전부 인라인 스타일) ----------
+function genCode(s){
+  const P=s.primary;
+  const bTitle=(t)=> t && t.trim()
+    ? `      <div style="font-weight:700; font-size:15px; color:#334155; margin-bottom:10px; padding-left:8px; border-left:3px solid ${P}; box-sizing:border-box !important;">${esc(t)}</div>\n`
+    : "";
+  const blockHTML=(b)=>{
+    if(b.type==="image"){
+      const inner = b.url && b.url.trim()
+        ? `      <img src="${esc(b.url)}" alt="${esc(b.title)}" style="width:100% !important; display:block; border-radius:8px; box-sizing:border-box !important;">`
+        : `      <div style="width:100% !important; height:180px; background:${tint(P,.12)}; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:13px; box-sizing:border-box !important;">사진 삽입 구간</div>`;
+      return `    <div style="margin-bottom:24px; box-sizing:border-box !important;">\n${bTitle(b.title)}${inner}\n    </div>`;
+    } else {
+      return `    <div style="margin-bottom:24px; box-sizing:border-box !important;">\n${bTitle(b.title)}      <div style="font-size:14px; color:#475569; line-height:1.75; word-break:keep-all; box-sizing:border-box !important;">${nl2br(b.content)}</div>\n    </div>`;
+    }
+  };
+  const catHTML=(c)=>{
+    const desc = c.desc && c.desc.trim()
+      ? `    <div style="margin-bottom:24px; padding:16px; background:${tint(P,.08)}; border-radius:8px; font-size:14px; color:#475569; line-height:1.7; word-break:keep-all; box-sizing:border-box !important;">${nl2br(c.desc)}</div>\n`
+      : "";
+    const blocks = c.blocks.map(blockHTML).join("\n");
+    return `  <details${c.open?" open":""} style="margin-bottom:15px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.02); box-sizing:border-box !important; overflow:hidden;">
+    <summary style="padding:18px 20px; background-color:${tint(P,.06)}; font-size:16px; font-weight:700; color:#1e293b; outline:none; box-sizing:border-box !important; cursor:pointer;">${esc(c.title)}</summary>
+    <div style="padding:24px 20px; border-top:1px solid #e2e8f0; box-sizing:border-box !important;">
+${desc}${blocks}
+    </div>
+  </details>`;
+  };
+  return `<div style="display:block !important; width:100% !important; max-width:500px !important; min-width:300px !important; margin:20px auto; font-family:'Apple SD Gothic Neo','Pretendard',sans-serif; clear:both;">
+${s.cats.map(catHTML).join("\n")}
+</div>`;
+}
+
+// ---------- 에디터 렌더 ----------
+function renderEditor(){
+  const root=document.getElementById('editor');
+  root.innerHTML = state.cats.map((c,ci)=>{
+    const blocks = c.blocks.map((b,bi)=>{
+      const media = b.type==="image"
+        ? `<div class="field"><label>이미지 주소(URL)</label>
+             <input class="txt" data-in="url" data-ci="${ci}" data-bi="${bi}" value="${esc(b.url)}" placeholder="https://...">
+             ${b.url ? `<img class="preview-img" src="${esc(b.url)}" alt="">` : ""}
+           </div>`
+        : `<div class="field"><label>본문 내용</label>
+             <textarea data-in="content" data-ci="${ci}" data-bi="${bi}" placeholder="원하는 글을 입력하세요">${esc(b.content)}</textarea></div>`;
+      return `<div class="block">
+        <div class="block-head">
+          <span class="tag ${b.type==='image'?'img':'txt'}">${b.type==='image'?'사진':'설명'}</span>
+          <span class="fill"></span>
+          <button class="iconbtn" data-act="block-up" data-ci="${ci}" data-bi="${bi}" ${bi===0?'disabled':''} title="위로">▲</button>
+          <button class="iconbtn" data-act="block-down" data-ci="${ci}" data-bi="${bi}" ${bi===c.blocks.length-1?'disabled':''} title="아래로">▼</button>
+          <button class="iconbtn danger" data-act="block-del" data-ci="${ci}" data-bi="${bi}" title="삭제">✕</button>
+        </div>
+        <div class="field"><label>블록 제목 (선택)</label>
+          <input class="txt" data-in="title" data-ci="${ci}" data-bi="${bi}" value="${esc(b.title)}" placeholder="제목 없이 두려면 비워두세요"></div>
+        ${media}
+      </div>`;
+    }).join("");
+
+    return `<div class="cat">
+      <div class="cat-head">
+        <span class="idx">${ci+1}</span>
+        <input class="title" data-in="cat-title" data-ci="${ci}" value="${esc(c.title)}" placeholder="대분류 제목">
+        <button class="iconbtn" data-act="cat-open" data-ci="${ci}" title="기본 펼침 상태" style="${c.open?'border-color:var(--accent);color:var(--accent);':''}">${c.open?'▼':'▶'}</button>
+        <button class="iconbtn" data-act="cat-up" data-ci="${ci}" ${ci===0?'disabled':''} title="위로">▲</button>
+        <button class="iconbtn" data-act="cat-down" data-ci="${ci}" ${ci===state.cats.length-1?'disabled':''} title="아래로">▼</button>
+        <button class="iconbtn danger" data-act="cat-del" data-ci="${ci}" title="삭제">✕</button>
+      </div>
+      <div class="cat-body">
+        <div class="field"><label>카테고리 전체 설명 (선택 — 비우면 안 나와요)</label>
+          <textarea data-in="cat-desc" data-ci="${ci}" placeholder="개요/설명">${esc(c.desc)}</textarea></div>
+        ${blocks}
+        <div class="addrow">
+          <button class="btn soft" data-act="add-img" data-ci="${ci}">＋ 사진 블록</button>
+          <button class="btn soft" data-act="add-txt" data-ci="${ci}">＋ 설명 블록</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderPreview(){ document.getElementById('preview').innerHTML = genCode(state); }
+function updateCode(){
+  const code = genCode(state);
+  document.getElementById('code').value = code;
+  const kb = (new Blob([code]).size/1024);
+  const el = document.getElementById('sizeTag');
+  if(el){
+    el.textContent = kb < 1024 ? kb.toFixed(1)+' KB' : (kb/1024).toFixed(2)+' MB';
+    el.style.color = kb > 500 ? '#dc2626' : (kb > 150 ? '#d97706' : 'var(--sub)');
+  }
+}
+function renderAll(){ renderEditor(); renderPreview(); updateCode(); }
+
+// ---------- 이벤트 ----------
+const editor=document.getElementById('editor');
+
+// 붙여넣은 값에서 이미지 주소만 뽑아내기 (<img> 태그를 통째로 넣어도 동작)
+function extractUrl(v){
+  if(!v) return v;
+  const s=v.trim();
+  if(!/[<\s]/.test(s)) return s;                 // 이미 순수 주소면 그대로
+  const tag=s.match(/src\s*=\s*["']([^"']+)["']/i);   // src="..." 우선
+  if(tag) return tag[1].trim();
+  const bare=s.match(/https?:\/\/[^\s"'<>)]+/i);      // 그 외 첫 http 주소
+  if(bare) return bare[0];
+  return s;
+}
+
+// 입력 (포커스 유지 위해 에디터 재렌더 안 함)
+editor.addEventListener('input', e=>{
+  const t=e.target, key=t.dataset.in; if(!key) return;
+  const ci=+t.dataset.ci, bi=t.dataset.bi!==undefined?+t.dataset.bi:null;
+  if(key==='cat-title') state.cats[ci].title=t.value;
+  else if(key==='cat-desc') state.cats[ci].desc=t.value;
+  else if(key==='url'){
+    const clean=extractUrl(t.value);
+    if(clean!==t.value) t.value=clean;            // 칸에도 정리된 주소 표시
+    state.cats[ci].blocks[bi].url=clean;
+    renderEditor();                                // 미리보기 썸네일 갱신
+    const again=editor.querySelector(`[data-in="url"][data-ci="${ci}"][data-bi="${bi}"]`);
+    if(again){ again.focus(); again.setSelectionRange(clean.length,clean.length); }
+  }
+  else state.cats[ci].blocks[bi][key]=t.value;
+  renderPreview(); updateCode();
+});
+
+// 버튼 클릭 (구조 변경 → 전체 재렌더)
+editor.addEventListener('click', e=>{
+  const btn=e.target.closest('[data-act]'); if(!btn) return;
+  const act=btn.dataset.act, ci=btn.dataset.ci!==undefined?+btn.dataset.ci:null, bi=btn.dataset.bi!==undefined?+btn.dataset.bi:null;
+  const cats=state.cats;
+  const move=(arr,i,d)=>{const j=i+d; if(j<0||j>=arr.length)return; [arr[i],arr[j]]=[arr[j],arr[i]];};
+  switch(act){
+    case 'cat-open': cats[ci].open=!cats[ci].open; break;
+    case 'cat-del': if(cats.length>1) cats.splice(ci,1); break;
+    case 'cat-up': move(cats,ci,-1); break;
+    case 'cat-down': move(cats,ci,1); break;
+    case 'add-img': cats[ci].blocks.push({type:"image",title:"자료 제목",url:""}); break;
+    case 'add-txt': cats[ci].blocks.push({type:"text",title:"설명 제목",content:"내용을 입력하세요."}); break;
+    case 'block-del': cats[ci].blocks.splice(bi,1); break;
+    case 'block-up': move(cats[ci].blocks,bi,-1); break;
+    case 'block-down': move(cats[ci].blocks,bi,1); break;
+  }
+  renderAll();
+});
+
+// 토글 추가 (에디터 하단 버튼)
+document.querySelector('[data-act="add-cat"]').addEventListener('click',()=>{
+  state.cats.push({open:false,title:"새 대분류",desc:"",blocks:[{type:"image",title:"자료 제목",url:""}]});
+  renderAll();
+});
+
+// ---------- 색상 ----------
+function applyColor(hex){
+  hex=hex.toUpperCase();
+  state.primary=hex;
+  document.documentElement.style.setProperty('--accent',hex);
+  document.getElementById('colorPick').value=hex;
+  document.getElementById('colorHex').value=hex;
+  renderEditor(); renderPreview(); updateCode();
+}
+document.getElementById('colorPick').addEventListener('input',e=>applyColor(e.target.value));
+document.getElementById('colorHex').addEventListener('input',e=>{
+  const v=e.target.value; if(/^#[0-9a-fA-F]{6}$/.test(v)) applyColor(v);
+});
+const sw=document.getElementById('swatches');
+PRESETS.forEach(c=>{
+  const b=document.createElement('button'); b.className='sw'; b.style.background=c; b.title=c;
+  b.onclick=()=>applyColor(c); sw.appendChild(b);
+});
+
+// ---------- 복사 ----------
+document.getElementById('copyBtn').addEventListener('click',async function(){
+  const code=genCode(state);
+  try{ await navigator.clipboard.writeText(code); }
+  catch{ const ta=document.getElementById('code'); ta.select(); document.execCommand('copy'); }
+  const old=this.textContent; this.textContent="✓ 복사됨!"; this.classList.add('copied');
+  setTimeout(()=>{ this.textContent=old; this.classList.remove('copied'); },1500);
+});
+
+// 초기 렌더
+applyColor(state.primary);
+renderAll();
+</script>
+</body>
+</html>
